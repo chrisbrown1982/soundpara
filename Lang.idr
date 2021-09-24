@@ -4,6 +4,12 @@ import Data.Nat
 
 %default total
 
+lookup : List Nat -> Nat -> Nat 
+lookup ls x = ?hole
+
+update : Nat -> Nat -> List Nat -> List Nat 
+update x m s  = ?hole2
+
 data AExp : Type where 
     ANum  : (n : Nat) -> AExp 
     AVar  : (x : Nat) -> AExp 
@@ -16,7 +22,7 @@ Evaluation of arithmetic expressions
 -------------------------------------}
 data AEvalRel : (AExp, List Nat) -> (n : Nat) -> Type where 
     MkEvalNum : AEvalRel (ANum n,s) n
-    -- MkEvalLoc
+    MkEvalLoc : AEvalRel (AVar x),s) (lookup s x)
     MkEvalSum : AEvalRel (a0,s) n0
              -> AEvalRel (a1,s) n1
              -> AEvalRel ((APlus a0 a1), s) n
@@ -86,9 +92,36 @@ data BEvalRel : (BExp, List Nat) -> BExp -> Type where
               -> BEvalRel (b1,s) BFalse 
               -> BEvalRel (BAnd b0 b1,s) BFalse 
 
+{-----------------------------------
+Commands
+------------------------------------}
+
 data Com : Type where 
     CSkip   : Com 
     CAssign : (x : Nat) -> (a : AExp) -> Com 
-    CStmt   : (c0, c1 : Com) -> Com 
+    CSeq   : (c0, c1 : Com) -> Com 
     CIf     : (b : BExp) -> (c0 : Com) -> (c1 : Com) -> Com 
     CWhile  : (b : BExp) -> (c  : Com) -> Com 
+
+{-----------------------------------
+Evaluation of Commands
+------------------------------------}
+
+data CEvalRel : (Com, List Nat) -> (List Nat) -> Type where 
+    MkEvalSkip : CEvalRel (CSkip,s) s
+    MkAss : AEvalRel (a,s) m 
+         -> CEvalRel (CAssign x a,s) (update x m s)
+    MkEvalSeq  : CEvalRel (c0,s) s'' 
+              -> CEvalRel (c1,s'') s'
+              -> CEvalRel (CSeq c0 c1,s) s'
+    MkEvalCond1 : CBEvalRel (b,s) BTrue 
+               -> CEvalRel (c0,s) s' 
+               -> CEvalRel (CIf b c0 c1,s) s' 
+    MkEvalCond2 : CBEvalRel (b,s) BFalse
+               -> CEvalRel (c1,s) s' 
+               -> CEvalRel (CIf b c0 c1,s) s' 
+    MkEvalWhile1 : CBEvalRel (b,s) BFalse 
+                -> CEvalRel (CWhile b c,s) s
+    MkEvalWhile2 : CBEvalRel (b,s) BTrue 
+                -> CEvalRel (CWhile b c,s'') s'
+                -> CEvalRel (CWhile b c,s) s'
